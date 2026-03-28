@@ -1,5 +1,7 @@
 # tmux-bridge
 
+**English** | [简体中文](README.zh-CN.md)
+
 MCP server + CLI adapters for [smux](https://github.com/ShawnPana/smux) cross-pane agent communication.
 
 - **For MCP agents** — Gemini CLI, Claude Code, or any MCP client gets structured tool calls with built-in read guards
@@ -13,6 +15,8 @@ npx @anthropic-fans/tmux-bridge
 # Kimi CLI
 kimi-tmux "ask the codex pane to review src/auth.ts"
 ```
+
+![Architecture](docs/images/architecture.png)
 
 ## Prerequisites
 
@@ -87,6 +91,8 @@ kimi-tmux "read what claude is working on"
 kimi-tmux --rounds 3 "send a message to gemini and wait for the result"
 ```
 
+![Kimi CLI Bridging](docs/images/kimi-bridging.png)
+
 How it works:
 
 1. Injects `system-instruction/smux-skill.md` as system prompt
@@ -94,6 +100,8 @@ How it works:
 3. Parses ` ```tool``` ` blocks from output (JSON or function-call style)
 4. Executes them via `tmux-bridge` CLI
 5. Feeds results back with full transcript (up to 5 rounds)
+
+![Read-Act-Read Workflow](docs/images/read-act-read.png)
 
 ## Agent Collaboration
 
