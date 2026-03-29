@@ -9,7 +9,7 @@ const server = new McpServer({
   version: "0.1.0",
 });
 
-function err(e: unknown): { content: Array<{ type: "text"; text: string }>; isError: true } {
+export function err(e: unknown): { content: Array<{ type: "text"; text: string }>; isError: true } {
   const msg = e instanceof Error ? e.message : String(e);
   return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true };
 }
@@ -76,7 +76,7 @@ server.tool(
 
 server.tool(
   "tmux_message",
-  "Send a message to another agent's pane with auto-prepended sender info and reply target. Must tmux_read first.",
+  "Send a message to another agent's pane with auto-prepended sender info, reply target, and correlation ID. Cannot message your own pane (loop prevention). Must tmux_read first.",
   {
     target: z.string().describe("Pane target: ID (%0), session:win.pane, or label"),
     text: z.string().describe("Message to send"),
@@ -190,7 +190,14 @@ async function main() {
   await server.connect(transport);
 }
 
-main().catch((err) => {
-  console.error("Fatal:", err);
-  process.exit(1);
-});
+// Only run when executed directly (not when imported for testing)
+const isDirectRun =
+  process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error("Fatal:", err);
+    process.exit(1);
+  });
+}

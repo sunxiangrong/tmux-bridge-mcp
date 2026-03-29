@@ -1,6 +1,6 @@
 {
   "name": "@anthropic-fans/tmux-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Standalone MCP server + CLI adapters for cross-pane AI agent communication via tmux",
   "type": "module",
   "main": "dist/index.js",
@@ -13,7 +13,8 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
   },
   "keywords": [
     "mcp",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.2"
   }
 }

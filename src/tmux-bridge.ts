@@ -5,6 +5,7 @@
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -20,7 +21,7 @@ function guardPath(paneId: string): string {
   return join(readGuardDir, paneId.replace(/%/g, "_"));
 }
 
-function markRead(paneId: string): void {
+export function markRead(paneId: string): void {
   try {
     if (!existsSync(readGuardDir)) {
       mkdirSync(readGuardDir, { recursive: true });
@@ -31,7 +32,7 @@ function markRead(paneId: string): void {
   }
 }
 
-function requireRead(paneId: string): void {
+export function requireRead(paneId: string): void {
   if (!existsSync(guardPath(paneId))) {
     throw new Error(
       `Must read pane ${paneId} before interacting. Call tmux_read first.`
@@ -39,7 +40,7 @@ function requireRead(paneId: string): void {
   }
 }
 
-function clearRead(paneId: string): void {
+export function clearRead(paneId: string): void {
   try {
     unlinkSync(guardPath(paneId));
   } catch {
@@ -134,6 +135,18 @@ async function getPaneId(target: string): Promise<string> {
   return output.trim();
 }
 
+// --- Loop Prevention ---
+
+function assertNotSelf(paneId: string, action: string): void {
+  const self = process.env.TMUX_PANE;
+  if (self && paneId === self) {
+    if (action === "message") {
+      throw new Error("Cannot send message to your own pane (loop prevention)");
+    }
+    throw new Error("Cannot interact with your own pane");
+  }
+}
+
 // --- Public API ---
 
 export interface PaneInfo {
@@ -195,6 +208,7 @@ export async function type(target: string, text: string): Promise<void> {
   const resolved = await resolveTarget(target);
   await validateTarget(resolved);
   const paneId = await getPaneId(resolved);
+  assertNotSelf(paneId, "type");
   requireRead(paneId);
 
   await tmux("send-keys", "-t", resolved, "-l", "--", text);
@@ -208,6 +222,7 @@ export async function message(
   const resolved = await resolveTarget(target);
   await validateTarget(resolved);
   const paneId = await getPaneId(resolved);
+  assertNotSelf(paneId, "message");
   requireRead(paneId);
 
   // Detect sender identity
@@ -221,7 +236,8 @@ export async function message(
   );
   const from = senderLabel.trim() || senderPane;
 
-  const header = `[tmux-bridge from:${from} pane:${senderPane}]`;
+  const correlationId = randomUUID().slice(0, 8);
+  const header = `[tmux-bridge from:${from} pane:${senderPane} id:${correlationId}]`;
   await tmux("send-keys", "-t", resolved, "-l", "--", `${header} ${text}`);
   clearRead(paneId);
 }
@@ -233,6 +249,7 @@ export async function keys(
   const resolved = await resolveTarget(target);
   await validateTarget(resolved);
   const paneId = await getPaneId(resolved);
+  assertNotSelf(paneId, "keys");
   requireRead(paneId);
 
   for (const key of keyList) {

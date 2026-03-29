@@ -37,7 +37,7 @@ interface TranscriptEntry {
   content: string;
 }
 
-function parseToolCalls(output: string): ToolCall[] {
+export function parseToolCalls(output: string): ToolCall[] {
   const calls: ToolCall[] = [];
 
   TOOL_BLOCK_RE.lastIndex = 0;
@@ -100,7 +100,7 @@ function parseToolCalls(output: string): ToolCall[] {
   return calls;
 }
 
-function parseFuncArgs(argsStr: string): Record<string, string | number | string[]> {
+export function parseFuncArgs(argsStr: string): Record<string, string | number | string[]> {
   const args: Record<string, string | number | string[]> = {};
   if (!argsStr) return args;
 
@@ -346,7 +346,14 @@ Examples:
   await runKimiWithToolLoop(prompt, maxRounds);
 }
 
-main().catch((e) => {
-  console.error("Fatal:", e instanceof Error ? e.message : e);
-  process.exit(1);
-});
+// Only run when executed directly (not when imported for testing)
+const isDirectRun =
+  process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
+
+if (isDirectRun) {
+  main().catch((e) => {
+    console.error("Fatal:", e instanceof Error ? e.message : e);
+    process.exit(1);
+  });
+}
