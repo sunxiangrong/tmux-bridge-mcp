@@ -1,10 +1,12 @@
-# tmux-bridge
+# tmux-bridge-mcp
 
 [English](README.md) | **简体中文**
 
+![tmux-bridge-mcp](docs/images/hero-banner.png)
+
 独立的 MCP 服务器，让 AI Agent（Claude Code、Gemini CLI、Codex、Kimi CLI）通过 tmux 面板互相通信。直接调用 tmux，除 tmux 本身外无任何外部依赖。
 
-## tmux 是什么？
+## 🖥️ tmux 是什么？
 
 [tmux](https://github.com/tmux/tmux) 是一个**终端多路复用器** -- 它可以把一个终端窗口分成多个**面板**，每个面板独立运行自己的程序。可以理解为终端的"增强版分屏"。
 
@@ -33,7 +35,7 @@
 
 ![解决方案](docs/images/the-solution.png)
 
-## tmux-bridge 能做什么？
+## ⚡ tmux-bridge 能做什么？
 
 安装之后，你的 AI agent 可以：
 
@@ -47,7 +49,7 @@
 
 所有操作都是标准 MCP 工具调用 -- agent 不需要学新语法。只要它支持 MCP，就已经会用了。
 
-## 支持的 Agent
+## 🤖 支持的 Agent
 
 ![支持的 Agent](docs/images/supported-agents.png)
 
@@ -76,7 +78,7 @@
 
 tmux-bridge 兼容**任何支持 stdio MCP 的 agent**。如果你的 agent 不在上面的列表中，试试添加 MCP 配置 -- 大概率直接能用。
 
-## 为什么需要这个
+## 💡 为什么需要这个
 
 当你在多个终端里分别运行不同的 AI agent 时，它们各自独立工作。你不得不手动在它们之间复制粘贴上下文、转发问题和回答，或者干脆记不清每个 agent 在做什么。
 
@@ -99,7 +101,7 @@ tmux-bridge 解决这个问题：让每个 agent 都能通过标准 MCP 工具**
 
 如果你已经在用 tmux 并排运行多个 agent，tmux-bridge 只是让它们彼此感知到对方的存在。
 
-## 快速开始
+## 🚀 快速开始
 
 **1. 安装 tmux**
 
@@ -132,7 +134,7 @@ npm install -g @anthropic-fans/tmux-bridge
 
 完成。你的 Agent 现在有 9 个 MCP 工具，可以跨 tmux 面板读取、输入和发送消息。
 
-## 工作原理
+## 🏗️ 工作原理
 
 ![分层架构](docs/images/layered-architecture.png)
 
@@ -168,7 +170,7 @@ CLI 路径（Kimi）：
 
 Read guard 在 MCP 层强制执行：调用 `tmux_type`、`tmux_message`、`tmux_keys` 之前必须先对目标面板调用 `tmux_read`，否则会报错。
 
-## 各 Agent 配置
+## ⚙️ 各 Agent 配置
 
 ### Gemini CLI（原生 MCP）
 
@@ -238,7 +240,7 @@ kimi-tmux --rounds 3 "给 gemini 发消息并等结果"
 
 ![Kimi CLI 桥接流程](docs/images/kimi-bridging.png)
 
-## 工具参考
+## 🔧 工具参考
 
 | 工具 | 说明 |
 |------|------|
@@ -254,7 +256,7 @@ kimi-tmux --rounds 3 "给 gemini 发消息并等结果"
 
 Target 可以是面板 ID（`%0`）、session:window.pane（`main:0.1`）或标签（`claude`）。
 
-## 示例
+## 📖 示例
 
 ### 让 Claude 审查文件（从 Gemini 发起）
 
@@ -291,18 +293,18 @@ kimi-tmux "让 gemini 总结 claude 面板的测试结果"
 +-----------------------------------------------------------+
 ```
 
-## 环境变量
+## 🌐 环境变量
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `TMUX_BRIDGE_SOCKET` | 覆盖 tmux 服务器 socket 路径 | 从 `$TMUX` 自动检测 |
 | `KIMI_PATH` | `kimi` 二进制路径（仅 kimi-tmux） | `kimi`（从 PATH） |
 
-## System Instruction
+## 📝 System Instruction
 
 对于支持自定义 system prompt 的 Agent，可使用 `system-instruction/smux-skill.md`。它包含 read-act-read 工作流说明和所有 MCP 工具的文档。
 
-## 相关项目
+## 🔗 相关项目
 
 | 项目 | 方式 | 重点 |
 |------|------|------|
@@ -327,6 +329,6 @@ kimi-tmux "让 gemini 总结 claude 面板的测试结果"
 
 **什么时候用 tmux-bridge-mcp：** 你想要一个即插即用的 MCP 服务器，任何 MCP 兼容的 agent 都能开箱即用，不碰你的 tmux 配置。
 
-## 许可证
+## 📄 许可证
 
 MIT

@@ -1,10 +1,12 @@
-# tmux-bridge
+# tmux-bridge-mcp
 
 **English** | [简体中文](README.zh-CN.md)
 
+![tmux-bridge-mcp](docs/images/hero-banner.png)
+
 A standalone MCP server that lets AI agents (Claude Code, Gemini CLI, Codex, Kimi CLI) communicate with each other through tmux panes. It talks directly to tmux -- no external dependencies beyond tmux itself.
 
-## What is tmux?
+## 🖥️ What is tmux?
 
 [tmux](https://github.com/tmux/tmux) is a **terminal multiplexer** -- it lets you split one terminal window into multiple **panes**, each running its own process independently. Think of it as "tabs on steroids" for your terminal.
 
@@ -33,7 +35,7 @@ Each pane is a full terminal. You can have Claude Code running in one, Codex in 
 
 ![The Solution](docs/images/the-solution.png)
 
-## What can you do with tmux-bridge?
+## ⚡ What can you do with tmux-bridge?
 
 Once installed, your AI agents can:
 
@@ -47,7 +49,7 @@ Once installed, your AI agents can:
 
 All of this happens through standard MCP tool calls -- your agent doesn't need to learn any new syntax. If it supports MCP, it already knows how.
 
-## Supported Agents
+## 🤖 Supported Agents
 
 ![Supported Agents](docs/images/supported-agents.png)
 
@@ -76,7 +78,7 @@ All of this happens through standard MCP tool calls -- your agent doesn't need t
 
 tmux-bridge works with **any agent that supports MCP over stdio**. If your agent isn't listed, try adding the MCP config -- it will likely just work.
 
-## Why
+## 💡 Why
 
 When you run multiple AI agents in separate terminals, they work in isolation. You end up copy-pasting context between them, manually relaying questions and answers, or losing track of what each agent is doing.
 
@@ -99,7 +101,7 @@ tmux-bridge solves this by giving every agent the ability to **read, type, and s
 
 If you already use tmux to run multiple agents side by side, tmux-bridge just makes them aware of each other.
 
-## Quick Start
+## 🚀 Quick Start
 
 **1. Install tmux**
 
@@ -132,7 +134,7 @@ npm install -g @anthropic-fans/tmux-bridge
 
 That's it. Your agent now has 9 MCP tools for reading, typing, and messaging across tmux panes.
 
-## Updating
+## 🔄 Updating
 
 ```bash
 # If installed globally
@@ -147,7 +149,7 @@ npx @anthropic-fans/tmux-bridge --version
 
 After updating, restart your agents to pick up the new version. If you use `npx` in your MCP config, it caches the package — run `npx --yes @anthropic-fans/tmux-bridge@latest` once to pull the latest, then your agents will use it on next startup.
 
-## How It Works
+## 🏗️ How It Works
 
 ![Layered Architecture](docs/images/layered-architecture.png)
 
@@ -183,7 +185,7 @@ All cross-pane interactions follow the **read-act-read** workflow:
 
 The read guard is enforced at the MCP layer: `tmux_type`, `tmux_message`, and `tmux_keys` will fail unless you call `tmux_read` on the target pane first.
 
-## Setup Per Agent
+## ⚙️ Setup Per Agent
 
 ### Gemini CLI (native MCP)
 
@@ -253,7 +255,7 @@ kimi-tmux --rounds 3 "send a message to gemini and wait for the result"
 
 ![Kimi CLI Bridging](docs/images/kimi-bridging.png)
 
-## Tools Reference
+## 🔧 Tools Reference
 
 | Tool | Description |
 |------|-------------|
@@ -269,7 +271,7 @@ kimi-tmux --rounds 3 "send a message to gemini and wait for the result"
 
 Targets can be a pane ID (`%0`), session:window.pane (`main:0.1`), or a label (`claude`).
 
-## Examples
+## 📖 Examples
 
 ### Ask Claude to review a file (from Gemini)
 
@@ -306,18 +308,18 @@ kimi-tmux "ask gemini to summarize the test results in claude's pane"
 +-----------------------------------------------------------+
 ```
 
-## Environment Variables
+## 🌐 Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `TMUX_BRIDGE_SOCKET` | Override tmux server socket path | Auto-detected from `$TMUX` |
 | `KIMI_PATH` | Path to `kimi` binary (kimi-tmux only) | `kimi` (in PATH) |
 
-## System Instruction
+## 📝 System Instruction
 
 For agents that support custom system prompts, use `system-instruction/smux-skill.md`. It teaches the read-act-read workflow and documents all available MCP tools.
 
-## Related Projects
+## 🔗 Related Projects
 
 | Project | Approach | Focus |
 |---------|----------|-------|
@@ -342,6 +344,6 @@ For agents that support custom system prompts, use `system-instruction/smux-skil
 
 **When to use tmux-bridge-mcp:** You want a drop-in MCP server that works with any MCP-compatible agent out of the box, without touching your tmux configuration.
 
-## License
+## 📄 License
 
 MIT
