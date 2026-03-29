@@ -25,7 +25,7 @@ const TOOL_BLOCK_RE = /```tool\s*\n([\s\S]*?)```/g;
 
 // Per-line patterns inside a tool block
 const FUNC_CALL_LINE_RE = /^(tmux_\w+)\((.*)?\)$/;
-const JSON_LINE_RE = /^\s*\{/;
+const JSON_LINE_RE = /^\s*[\[{]/;
 
 interface ToolCall {
   name: string;
@@ -106,9 +106,10 @@ function parseFuncArgs(argsStr: string): Record<string, string | number | string
 
   // Try to parse as JSON object if it looks like one (handles: target="x" → {"target": "x"})
   // Convert key=value to JSON: target="codex", lines=20 → {"target":"codex","lines":20}
+  // Only replace single quotes used as string delimiters (around values), not apostrophes in text
   const jsonAttempt = "{" + argsStr
     .replace(/(\w+)\s*=\s*/g, '"$1": ')
-    .replace(/'/g, '"')
+    .replace(/:\s*'([^']*)'/g, ': "$1"')
     + "}";
   try {
     const parsed = JSON.parse(jsonAttempt);
@@ -157,20 +158,30 @@ async function executeToolCall(call: ToolCall): Promise<string> {
           .join("\n") || "(no panes)";
       }
       case "tmux_read":
+        if (!args.target) return "Error: tmux_read requires 'target' argument";
         return await bridge.read(String(args.target), Number(args.lines) || 50);
       case "tmux_type":
+        if (!args.target) return "Error: tmux_type requires 'target' argument";
+        if (args.text == null) return "Error: tmux_type requires 'text' argument";
         await bridge.type(String(args.target), String(args.text));
         return `Typed into ${args.target}`;
       case "tmux_message":
+        if (!args.target) return "Error: tmux_message requires 'target' argument";
+        if (args.text == null) return "Error: tmux_message requires 'text' argument";
         await bridge.message(String(args.target), String(args.text));
         return `Message sent to ${args.target}`;
       case "tmux_keys":
-        await bridge.keys(String(args.target), ...(Array.isArray(args.keys) ? args.keys.map(String) : []));
+        if (!args.target) return "Error: tmux_keys requires 'target' argument";
+        if (!Array.isArray(args.keys) || args.keys.length === 0) return "Error: tmux_keys requires 'keys' array argument";
+        await bridge.keys(String(args.target), ...args.keys.map(String));
         return `Sent keys to ${args.target}`;
       case "tmux_name":
+        if (!args.target) return "Error: tmux_name requires 'target' argument";
+        if (!args.label) return "Error: tmux_name requires 'label' argument";
         await bridge.name(String(args.target), String(args.label));
         return `Labeled ${args.target} as "${args.label}"`;
       case "tmux_resolve":
+        if (!args.label) return "Error: tmux_resolve requires 'label' argument";
         return await bridge.resolve(String(args.label));
       case "tmux_id":
         return await bridge.id();

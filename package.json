@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
+    "tmux-bridge": "dist/index.js",
     "tmux-bridge-mcp": "dist/index.js",
     "kimi-tmux": "dist/kimi-adapter.js"
   },
