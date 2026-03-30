@@ -181,7 +181,7 @@ server.tool(
 
 // --- Start ---
 
-async function main() {
+export async function startServer() {
   // Apply sensible tmux defaults (mouse scroll, long history, vi keys)
   // so users don't need to configure ~/.tmux.conf manually.
   bridge.applyDefaults().catch(() => {});
@@ -196,7 +196,7 @@ const isDirectRun =
   import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
 
 if (isDirectRun) {
-  main().catch((err) => {
+  startServer().catch((err) => {
     console.error("Fatal:", err);
     process.exit(1);
   });

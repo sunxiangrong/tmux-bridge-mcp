@@ -103,30 +103,40 @@ tmux-bridge 解决这个问题：让每个 agent 都能通过标准 MCP 工具**
 
 ## 🚀 快速开始
 
+**一条命令配置所有 agent：**
+
+```bash
+npx tmux-bridge-mcp setup
+```
+
+自动检测你机器上的 Claude Code、Gemini CLI、Codex 和 Kimi CLI，然后为每个写入正确的 MCP 配置。几秒完成。
+
+**看看效果：**
+
+```bash
+npx tmux-bridge-mcp demo
+```
+
+打开一个 3 面板的 tmux session，运行实时跨面板通信演示。
+
+<details>
+<summary>手动配置（如果你喜欢）</summary>
+
 **1. 安装 tmux**
 
 ```bash
-# macOS
-brew install tmux
-
-# Linux
-apt install tmux   # 或 dnf install tmux
+brew install tmux    # macOS
+apt install tmux     # Linux
 ```
 
-**2. 安装 tmux-bridge**
-
-```bash
-npm install -g @anthropic-fans/tmux-bridge
-```
-
-**3. 添加到 Agent 的 MCP 配置**
+**2. 添加到 Agent 的 MCP 配置**
 
 ```json
 {
   "mcpServers": {
     "tmux-bridge": {
       "command": "npx",
-      "args": ["@anthropic-fans/tmux-bridge"]
+      "args": ["-y", "tmux-bridge-mcp"]
     }
   }
 }

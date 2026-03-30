@@ -103,51 +103,63 @@ If you already use tmux to run multiple agents side by side, tmux-bridge just ma
 
 ## 🚀 Quick Start
 
+**One command to configure all your agents:**
+
+```bash
+npx tmux-bridge-mcp setup
+```
+
+This auto-detects Claude Code, Gemini CLI, Codex, and Kimi CLI on your machine, then writes the correct MCP config for each one. Done in seconds.
+
+**See it in action:**
+
+```bash
+npx tmux-bridge-mcp demo
+```
+
+Opens a 3-pane tmux session and runs a live cross-pane communication demo.
+
+<details>
+<summary>Manual setup (if you prefer)</summary>
+
 **1. Install tmux**
 
 ```bash
-# macOS
-brew install tmux
-
-# Linux
-apt install tmux   # or dnf install tmux
+brew install tmux    # macOS
+apt install tmux     # Linux
 ```
 
-**2. Install tmux-bridge**
-
-```bash
-npm install -g @anthropic-fans/tmux-bridge
-```
-
-**3. Add to your agent's MCP config**
+**2. Add to your agent's MCP config**
 
 ```json
 {
   "mcpServers": {
     "tmux-bridge": {
       "command": "npx",
-      "args": ["@anthropic-fans/tmux-bridge"]
+      "args": ["-y", "tmux-bridge-mcp"]
     }
   }
 }
 ```
 
-That's it. Your agent now has 9 MCP tools for reading, typing, and messaging across tmux panes.
+Restart your agent. It now has 9 MCP tools for cross-pane communication.
+
+</details>
 
 ## 🔄 Updating
 
 ```bash
 # If installed globally
-npm update -g @anthropic-fans/tmux-bridge
+npm update -g tmux-bridge-mcp
 
 # If using npx (auto-updates, but to force latest)
-npx @anthropic-fans/tmux-bridge@latest
+npx tmux-bridge-mcp@latest
 
 # Check your current version
-npx @anthropic-fans/tmux-bridge --version
+npx tmux-bridge-mcp --version
 ```
 
-After updating, restart your agents to pick up the new version. If you use `npx` in your MCP config, it caches the package — run `npx --yes @anthropic-fans/tmux-bridge@latest` once to pull the latest, then your agents will use it on next startup.
+After updating, restart your agents to pick up the new version. If you use `npx` in your MCP config, it caches the package — run `npx --yes tmux-bridge-mcp@latest` once to pull the latest, then your agents will use it on next startup.
 
 ## 🏗️ How It Works
 
@@ -196,7 +208,7 @@ Add to `~/.gemini/settings.json`:
   "mcpServers": {
     "tmux-bridge": {
       "command": "npx",
-      "args": ["@anthropic-fans/tmux-bridge"]
+      "args": ["tmux-bridge-mcp"]
     }
   }
 }
@@ -211,7 +223,7 @@ Add to your project's `.mcp.json` or global MCP config:
   "mcpServers": {
     "tmux-bridge": {
       "command": "npx",
-      "args": ["@anthropic-fans/tmux-bridge"]
+      "args": ["tmux-bridge-mcp"]
     }
   }
 }
@@ -226,7 +238,7 @@ Add to your MCP config following the Codex MCP setup docs:
   "mcpServers": {
     "tmux-bridge": {
       "command": "npx",
-      "args": ["@anthropic-fans/tmux-bridge"]
+      "args": ["tmux-bridge-mcp"]
     }
   }
 }
