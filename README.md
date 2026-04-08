@@ -35,6 +35,38 @@ Each pane is a full terminal. You can have Claude Code running in one, Codex in 
 
 ![The Solution](docs/images/the-solution.png)
 
+## Controlled SSH shell panes
+
+This fork also supports using tmux panes as controlled `ssh` shell targets, not just agent-to-agent chat panes.
+
+- A pane labeled `ssh:xinong` or `ssh:ias` is treated as an `ssh-shell` pane
+- A pane labeled `manual` is treated as a human-owned pane and is write-protected by default
+- Agents still follow the same `tmux_read -> tmux_type -> tmux_read -> tmux_keys` workflow
+
+Boundary control is intentionally simple and environment-driven:
+
+- `TMUX_BRIDGE_READABLE_TARGETS`
+  - comma-separated readable targets (`%pane`, `session:window`, or label)
+- `TMUX_BRIDGE_WRITABLE_TARGETS`
+  - comma-separated writable targets
+- `TMUX_BRIDGE_READONLY_PATHS`
+  - block writes when pane cwd starts with one of these prefixes
+- `TMUX_BRIDGE_WRITABLE_PATHS`
+  - if set, only allow writes when pane cwd is under one of these prefixes
+- `TMUX_BRIDGE_DENY_PREFIXES`
+  - dangerous command prefixes rejected for `ssh-shell` panes
+- `TMUX_BRIDGE_ALLOW_MANUAL_WRITE=1`
+  - opt out of the default write block for panes labeled `manual`
+
+Example:
+
+```bash
+export TMUX_BRIDGE_WRITABLE_TARGETS="ssh:xinong,agent:codex"
+export TMUX_BRIDGE_READONLY_PATHS="/,/etc,/usr,/var"
+export TMUX_BRIDGE_WRITABLE_PATHS="/storage/public/home/2020060185"
+export TMUX_BRIDGE_DENY_PREFIXES="rm -rf,sudo,reboot,shutdown"
+```
+
 ## ⚡ What can you do with tmux-bridge?
 
 Once installed, your AI agents can:
@@ -321,7 +353,21 @@ kimi-tmux --rounds 3 "send a message to gemini and wait for the result"
 | `tmux_id` | Print current pane's tmux ID |
 | `tmux_doctor` | Diagnose tmux connectivity issues |
 
-Targets can be a pane ID (`%0`), session:window.pane (`main:0.1`), or a label (`claude`).
+Targets can be a pane ID (`%0`), session:window.pane (`main:0.1`), or a label (`claude`, `agent:codex`, `ssh:xinong`, `manual`).
+
+`tmux_list` now also reports a pane kind:
+
+- `agent`
+- `ssh-shell`
+- `manual`
+- `unknown`
+
+Recommended workflow for `ssh-shell` panes:
+
+1. `tmux_read(target="ssh:xinong", lines=40)`
+2. `tmux_type(target="ssh:xinong", text="tail -n 50 job.log")`
+3. `tmux_read(target="ssh:xinong", lines=5)`
+4. `tmux_keys(target="ssh:xinong", keys=["Enter"])`
 
 ## 📖 Examples
 

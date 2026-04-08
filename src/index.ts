@@ -18,7 +18,7 @@ export function err(e: unknown): { content: Array<{ type: "text"; text: string }
 
 server.tool(
   "tmux_list",
-  "List all tmux panes with target ID, process, label, and working directory",
+  "List all tmux panes with target ID, process, label, working directory, and inferred pane kind",
   {},
   async () => {
     try {
@@ -26,7 +26,7 @@ server.tool(
       const text = panes
         .map(
           (p) =>
-            `${p.target} | ${p.sessionWindow} | ${p.process} | label:${p.label || "(none)"} | ${p.cwd}`
+            `${p.target} | ${p.sessionWindow} | ${p.process} | kind:${p.kind} | label:${p.label || "(none)"} | ${p.cwd}`
         )
         .join("\n");
       return { content: [{ type: "text", text: text || "No panes found" }] };
@@ -59,7 +59,7 @@ server.tool(
 
 server.tool(
   "tmux_type",
-  "Type text into a tmux pane WITHOUT pressing Enter. You must tmux_read the pane first (read guard enforced). After typing, use tmux_read to verify, then tmux_keys to press Enter.",
+  "Type text into a tmux pane WITHOUT pressing Enter. You must tmux_read the pane first (read guard enforced). Optional target/path/command policy can block writes, especially for ssh-shell panes. After typing, use tmux_read to verify, then tmux_keys to press Enter.",
   {
     target: z.string().describe("Pane target: ID (%0), session:win.pane, or label"),
     text: z.string().describe("Text to type into the pane"),
@@ -95,7 +95,7 @@ server.tool(
 
 server.tool(
   "tmux_keys",
-  "Send special keys to a tmux pane (Enter, Escape, C-c, etc.). Must tmux_read first.",
+  "Send special keys to a tmux pane (Enter, Escape, C-c, etc.). Must tmux_read first. Optional target/path policy can block writes.",
   {
     target: z.string().describe("Pane target: ID (%0), session:win.pane, or label"),
     keys: z

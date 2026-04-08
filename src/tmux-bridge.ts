@@ -12,6 +12,8 @@ import { join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
+export type PaneKind = "agent" | "ssh-shell" | "manual" | "unknown";
+
 // --- Read Guard ---
 // Enforces read-before-act: agents must read a pane before typing/keys.
 
@@ -95,8 +97,8 @@ async function resolveTarget(target: string): Promise<string> {
   // tmux pane ID like %0, %12
   if (/^%\d+$/.test(target)) return target;
 
-  // session:win.pane or has dot
-  if (target.includes(":") || target.includes(".")) return target;
+  // canonical session:window or session:window.pane
+  if (/^[^:\s]+:\d+(?:\.\d+)?$/.test(target)) return target;
 
   // Pure numeric — treat as window index
   if (/^\d+$/.test(target)) return target;
@@ -156,6 +158,7 @@ export interface PaneInfo {
   process: string;
   label: string;
   cwd: string;
+  kind: PaneKind;
 }
 
 export async function list(): Promise<PaneInfo[]> {
@@ -181,6 +184,11 @@ export async function list(): Promise<PaneInfo[]> {
         process: cmd || "?",
         label: label || "",
         cwd: home && cwd ? cwd.replace(home, "~") : (cwd || ""),
+        kind: classifyPane({
+          label: label || "",
+          process: cmd || "",
+          cwd: cwd || "",
+        }),
       };
     });
 }
@@ -189,6 +197,7 @@ export async function read(target: string, lines: number = 50): Promise<string> 
   const resolved = await resolveTarget(target);
   await validateTarget(resolved);
   const paneId = await getPaneId(resolved);
+  await assertReadableTarget(resolved, paneId);
 
   const output = await tmux(
     "capture-pane",
@@ -210,6 +219,8 @@ export async function type(target: string, text: string): Promise<void> {
   const paneId = await getPaneId(resolved);
   assertNotSelf(paneId, "type");
   requireRead(paneId);
+  await assertWritableTarget(resolved, paneId);
+  await assertPaneInputAllowed(resolved, text);
 
   await tmux("send-keys", "-t", resolved, "-l", "--", text);
   clearRead(paneId);
@@ -224,6 +235,7 @@ export async function message(
   const paneId = await getPaneId(resolved);
   assertNotSelf(paneId, "message");
   requireRead(paneId);
+  await assertWritableTarget(resolved, paneId);
 
   // Detect sender identity
   const senderPane = process.env.TMUX_PANE || "unknown";
@@ -251,6 +263,7 @@ export async function keys(
   const paneId = await getPaneId(resolved);
   assertNotSelf(paneId, "keys");
   requireRead(paneId);
+  await assertWritableTarget(resolved, paneId);
 
   for (const key of keyList) {
     await tmux("send-keys", "-t", resolved, key);
@@ -390,4 +403,104 @@ export async function doctor(): Promise<string> {
   lines.push("---");
   lines.push(hasErrors ? "Status: DEGRADED — some checks failed" : "Status: OK");
   return lines.join("\n");
+}
+
+function classifyPane(input: { label: string; process: string; cwd: string }): PaneKind {
+  const label = input.label.trim().toLowerCase();
+  const process = input.process.trim().toLowerCase();
+  const cwd = input.cwd.trim().toLowerCase();
+
+  if (label === "manual") return "manual";
+  if (label.startsWith("ssh:")) return "ssh-shell";
+  if (label.startsWith("agent:")) return "agent";
+  if (process === "ssh") return "ssh-shell";
+  if (["claude", "codex", "gemini", "kimi"].includes(process)) return "agent";
+  if (cwd.includes("/.ssh")) return "ssh-shell";
+  return "unknown";
+}
+
+function parseCsvEnv(name: string): string[] {
+  return (process.env[name] || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+async function paneMetadata(target: string): Promise<{ paneId: string; sessionWindow: string; label: string; cwd: string; process: string; kind: PaneKind }> {
+  const output = await tmux(
+    "display-message",
+    "-t",
+    target,
+    "-p",
+    "#{pane_id}|#{session_name}:#{window_index}|#{@name}|#{pane_current_path}|#{pane_current_command}"
+  );
+  const [paneId, sessionWindow, label, cwd, process] = output.trim().split("|");
+  return {
+    paneId,
+    sessionWindow,
+    label: label || "",
+    cwd: cwd || "",
+    process: process || "",
+    kind: classifyPane({ label: label || "", process: process || "", cwd: cwd || "" }),
+  };
+}
+
+function matchesAllowedTarget(metadata: { paneId: string; sessionWindow: string; label: string }, allowed: string[]): boolean {
+  if (allowed.length === 0) return true;
+  return (
+    allowed.includes(metadata.paneId) ||
+    allowed.includes(metadata.sessionWindow) ||
+    (!!metadata.label && allowed.includes(metadata.label))
+  );
+}
+
+async function assertReadableTarget(target: string, paneId: string): Promise<void> {
+  const allowed = parseCsvEnv("TMUX_BRIDGE_READABLE_TARGETS");
+  if (allowed.length === 0) return;
+  const metadata = await paneMetadata(target);
+  if (!matchesAllowedTarget(metadata, allowed)) {
+    throw new Error(`Read blocked by target policy for pane ${paneId}`);
+  }
+}
+
+async function assertWritableTarget(target: string, paneId: string): Promise<void> {
+  const allowed = parseCsvEnv("TMUX_BRIDGE_WRITABLE_TARGETS");
+  const metadata = await paneMetadata(target);
+  if (
+    metadata.kind === "manual" &&
+    process.env.TMUX_BRIDGE_ALLOW_MANUAL_WRITE !== "1"
+  ) {
+    throw new Error(
+      `Write blocked for manual pane ${metadata.label || paneId}; set TMUX_BRIDGE_ALLOW_MANUAL_WRITE=1 to override`
+    );
+  }
+  if (allowed.length === 0) return;
+  if (!matchesAllowedTarget(metadata, allowed)) {
+    throw new Error(`Write blocked by target policy for pane ${paneId}`);
+  }
+
+  const readonlyRoots = parseCsvEnv("TMUX_BRIDGE_READONLY_PATHS");
+  const writableRoots = parseCsvEnv("TMUX_BRIDGE_WRITABLE_PATHS");
+  if (readonlyRoots.some((root) => metadata.cwd.startsWith(root))) {
+    throw new Error(`Write blocked by readonly path policy for pane ${paneId}: ${metadata.cwd}`);
+  }
+  if (writableRoots.length > 0 && !writableRoots.some((root) => metadata.cwd.startsWith(root))) {
+    throw new Error(`Write blocked by writable path policy for pane ${paneId}: ${metadata.cwd}`);
+  }
+}
+
+async function assertPaneInputAllowed(target: string, text: string): Promise<void> {
+  const metadata = await paneMetadata(target);
+  if (metadata.kind !== "ssh-shell") return;
+  const firstLine = text
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean) || "";
+  if (!firstLine) return;
+  const denyPrefixes = parseCsvEnv("TMUX_BRIDGE_DENY_PREFIXES");
+  const defaults = ["rm -rf", "sudo", "reboot", "shutdown"];
+  const prefixes = denyPrefixes.length > 0 ? denyPrefixes : defaults;
+  if (prefixes.some((prefix) => firstLine === prefix || firstLine.startsWith(`${prefix} `))) {
+    throw new Error(`Input blocked by command policy for ssh pane ${metadata.label || metadata.paneId}: ${firstLine}`);
+  }
 }

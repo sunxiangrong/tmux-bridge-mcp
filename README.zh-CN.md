@@ -35,6 +35,38 @@
 
 ![解决方案](docs/images/the-solution.png)
 
+## 受控的 SSH shell 面板
+
+这个 fork 额外支持把 tmux 面板当成受控的 `ssh` shell 目标，而不只是 agent 之间互发消息。
+
+- 标记为 `ssh:xinong`、`ssh:ias` 的面板会被识别成 `ssh-shell`
+- 标记为 `manual` 的面板会被识别成人工面板，默认禁止写入
+- agent 仍然走同一套 `tmux_read -> tmux_type -> tmux_read -> tmux_keys` 工作流
+
+第一阶段边界控制故意保持简单，全部通过环境变量控制：
+
+- `TMUX_BRIDGE_READABLE_TARGETS`
+  - 允许读取的目标列表（`%pane`、`session:window` 或 label）
+- `TMUX_BRIDGE_WRITABLE_TARGETS`
+  - 允许写入的目标列表
+- `TMUX_BRIDGE_READONLY_PATHS`
+  - 如果 pane 当前目录落在这些前缀下，拒绝写入
+- `TMUX_BRIDGE_WRITABLE_PATHS`
+  - 如果设置了，只允许在这些前缀下写入
+- `TMUX_BRIDGE_DENY_PREFIXES`
+  - 对 `ssh-shell` 面板拒绝的危险命令前缀
+- `TMUX_BRIDGE_ALLOW_MANUAL_WRITE=1`
+  - 显式取消 `manual` 面板默认禁止写入的保护
+
+示例：
+
+```bash
+export TMUX_BRIDGE_WRITABLE_TARGETS="ssh:xinong,agent:codex"
+export TMUX_BRIDGE_READONLY_PATHS="/,/etc,/usr,/var"
+export TMUX_BRIDGE_WRITABLE_PATHS="/storage/public/home/2020060185"
+export TMUX_BRIDGE_DENY_PREFIXES="rm -rf,sudo,reboot,shutdown"
+```
+
 ## ⚡ tmux-bridge 能做什么？
 
 安装之后，你的 AI agent 可以：
@@ -281,7 +313,21 @@ kimi-tmux --rounds 3 "给 gemini 发消息并等结果"
 | `tmux_id` | 输出当前面板的 tmux ID |
 | `tmux_doctor` | 诊断 tmux 连接问题 |
 
-Target 可以是面板 ID（`%0`）、session:window.pane（`main:0.1`）或标签（`claude`）。
+Target 可以是面板 ID（`%0`）、session:window.pane（`main:0.1`）或标签（`claude`、`agent:codex`、`ssh:xinong`、`manual`）。
+
+`tmux_list` 现在还会显示 pane 类型：
+
+- `agent`
+- `ssh-shell`
+- `manual`
+- `unknown`
+
+推荐的 `ssh-shell` 工作流：
+
+1. `tmux_read(target="ssh:xinong", lines=40)`
+2. `tmux_type(target="ssh:xinong", text="tail -n 50 job.log")`
+3. `tmux_read(target="ssh:xinong", lines=5)`
+4. `tmux_keys(target="ssh:xinong", keys=["Enter"])`
 
 ## 📖 示例
 

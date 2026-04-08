@@ -58,35 +58,42 @@ beforeAll(async () => {
   }
 
   // Create a new session with 3 panes (simulating 3 agents)
-  await tmux("new-session", "-d", "-s", SESSION, "-x", "200", "-y", "50");
-
-  // Pane 0 = "claude" — run a simple shell
   const pane0 = await tmux(
-    "display-message",
-    "-t",
-    `${SESSION}:0.0`,
-    "-p",
-    "#{pane_id}"
+    "new-session",
+    "-d",
+    "-P",
+    "-F",
+    "#{pane_id}",
+    "-s",
+    SESSION,
+    "-x",
+    "200",
+    "-y",
+    "50"
   );
+  const pane0Target = await tmux("display-message", "-t", pane0, "-p", "#{session_name}:#{window_index}.#{pane_index}");
 
   // Split to create pane 1 = "codex"
-  await tmux("split-window", "-h", "-t", `${SESSION}:0`);
   const pane1 = await tmux(
-    "display-message",
+    "split-window",
+    "-h",
+    "-P",
+    "-F",
+    "#{pane_id}",
     "-t",
-    `${SESSION}:0.1`,
-    "-p",
-    "#{pane_id}"
+    pane0Target
   );
 
   // Split to create pane 2 = "kimi"
-  await tmux("split-window", "-v", "-t", `${SESSION}:0.1`);
+  const pane1Target = await tmux("display-message", "-t", pane1, "-p", "#{session_name}:#{window_index}.#{pane_index}");
   const pane2 = await tmux(
-    "display-message",
+    "split-window",
+    "-v",
+    "-P",
+    "-F",
+    "#{pane_id}",
     "-t",
-    `${SESSION}:0.2`,
-    "-p",
-    "#{pane_id}"
+    pane1Target
   );
 
   paneIds = [pane0, pane1, pane2];
@@ -133,6 +140,24 @@ describe.skipIf(!tmuxAvailable)("Integration: tmux cross-pane", () => {
       .map((p) => p.label)
       .sort();
     expect(labels).toEqual(["claude", "codex", "kimi"]);
+  });
+
+  it("should classify labeled agent/manual/ssh panes", async () => {
+    await bridge.name(paneIds[0], "agent:claude");
+    await bridge.name(paneIds[1], "ssh:xinong");
+    await bridge.name(paneIds[2], "manual");
+
+    const panes = await bridge.list();
+    const relevant = panes.filter((p) => paneIds.includes(p.target));
+    const byLabel = new Map(relevant.map((pane) => [pane.label, pane.kind]));
+
+    expect(byLabel.get("agent:claude")).toBe("agent");
+    expect(byLabel.get("ssh:xinong")).toBe("ssh-shell");
+    expect(byLabel.get("manual")).toBe("manual");
+
+    await bridge.name(paneIds[0], "claude");
+    await bridge.name(paneIds[1], "codex");
+    await bridge.name(paneIds[2], "kimi");
   });
 
   it("should read pane content", async () => {
@@ -211,6 +236,24 @@ describe.skipIf(!tmuxAvailable)("Integration: tmux cross-pane", () => {
     await sleep(300);
     const output = await bridge.read("kimi", 10);
     expect(output).toContain("codex_to_kimi");
+  });
+
+  it("should block writes to a manual pane by default", async () => {
+    await bridge.name(paneIds[2], "manual");
+    await bridge.read("manual", 5);
+    await expect(bridge.type("manual", "echo should_fail")).rejects.toThrow(
+      /Write blocked for manual pane/
+    );
+    await bridge.name(paneIds[2], "kimi");
+  });
+
+  it("should block dangerous commands in ssh-labeled panes", async () => {
+    await bridge.name(paneIds[1], "ssh:xinong");
+    await bridge.read("ssh:xinong", 5);
+    await expect(bridge.type("ssh:xinong", "sudo reboot")).rejects.toThrow(
+      /Input blocked by command policy/
+    );
+    await bridge.name(paneIds[1], "codex");
   });
 
   it("should name a pane and resolve it", async () => {
